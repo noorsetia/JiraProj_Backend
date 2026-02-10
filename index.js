@@ -20,6 +20,17 @@ import aiRoutes from './routes/aiRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 
+// Debug: Check if imports worked
+console.log('Import check:', {
+  authRoutes: typeof authRoutes,
+  projectRoutes: typeof projectRoutes,
+  taskRoutes: typeof taskRoutes,
+  sprintRoutes: typeof sprintRoutes,
+  aiRoutes: typeof aiRoutes,
+  analyticsRoutes: typeof analyticsRoutes,
+  notificationRoutes: typeof notificationRoutes
+});
+
 // Load environment variables
 dotenv.config();
 
@@ -86,20 +97,57 @@ app.use((req, res, next) => {
 
 // API Routes - Make sure these are registered
 console.log('Registering routes...');
-app.use('/api/auth', authRoutes);
-console.log('✓ Auth routes registered');
-app.use('/api/projects', projectRoutes);
-console.log('✓ Project routes registered');
-app.use('/api/tasks', taskRoutes);
-console.log('✓ Task routes registered');
-app.use('/api/sprints', sprintRoutes);
-console.log('✓ Sprint routes registered');
-app.use('/api/ai', aiRoutes);
-console.log('✓ AI routes registered');
-app.use('/api/analytics', analyticsRoutes);
-console.log('✓ Analytics routes registered');
-app.use('/api/notifications', notificationRoutes);
-console.log('✓ Notification routes registered');
+console.log('authRoutes type:', typeof authRoutes, authRoutes);
+console.log('projectRoutes type:', typeof projectRoutes, projectRoutes);
+
+try {
+  app.use('/api/auth', authRoutes);
+  console.log('✓ Auth routes registered');
+} catch (err) {
+  console.error('❌ Failed to register auth routes:', err.message);
+}
+
+try {
+  app.use('/api/projects', projectRoutes);
+  console.log('✓ Project routes registered');
+} catch (err) {
+  console.error('❌ Failed to register project routes:', err.message);
+}
+
+try {
+  app.use('/api/tasks', taskRoutes);
+  console.log('✓ Task routes registered');
+} catch (err) {
+  console.error('❌ Failed to register task routes:', err.message);
+}
+
+try {
+  app.use('/api/sprints', sprintRoutes);
+  console.log('✓ Sprint routes registered');
+} catch (err) {
+  console.error('❌ Failed to register sprint routes:', err.message);
+}
+
+try {
+  app.use('/api/ai', aiRoutes);
+  console.log('✓ AI routes registered');
+} catch (err) {
+  console.error('❌ Failed to register AI routes:', err.message);
+}
+
+try {
+  app.use('/api/analytics', analyticsRoutes);
+  console.log('✓ Analytics routes registered');
+} catch (err) {
+  console.error('❌ Failed to register analytics routes:', err.message);
+}
+
+try {
+  app.use('/api/notifications', notificationRoutes);
+  console.log('✓ Notification routes registered');
+} catch (err) {
+  console.error('❌ Failed to register notification routes:', err.message);
+}
 
 // Health check route
 app.get('/api/health', (req, res) => {
