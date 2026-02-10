@@ -111,7 +111,20 @@ app.get('/api/health', (req, res) => {
     success: true,
     message: 'Server is running on Vercel',
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'production'
+    env: process.env.NODE_ENV || 'production',
+    hasMongoUri: !!process.env.MONGODB_URI,
+    hasJwtSecret: !!process.env.JWT_SECRET
+  });
+});
+
+// Test route to verify routing works
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Test route works',
+    registeredRoutes: app._router.stack
+      .filter(r => r.route)
+      .map(r => Object.keys(r.route.methods)[0].toUpperCase() + ' ' + r.route.path)
   });
 });
 
