@@ -27,16 +27,43 @@ dotenv.config();
 const app = express();
 
 // Connect to MongoDB (only once per cold start)
-connectDB();
+let dbConnected = false;
+if (!dbConnected) {
+  connectDB().then(() => {
+    dbConnected = true;
+    console.log('MongoDB connected in serverless function');
+  }).catch(err => {
+    console.error('MongoDB connection error:', err);
+  });
+}
 
 // Configure Passport
 configurePassport();
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true
-}));
+// Middleware - CORS must allow credentials and specific origin
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://localhost:5174'
+    ].filter(Boolean);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(null, true); // Allow all for now, restrict later
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -55,14 +82,28 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// API Routes
+// Request logging for debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  next();
+});
+
+// API Routes - Make sure these are registered
+console.log('Registering routes...');
 app.use('/api/auth', authRoutes);
+console.log('✓ Auth routes registered');
 app.use('/api/projects', projectRoutes);
+console.log('✓ Project routes registered');
 app.use('/api/tasks', taskRoutes);
+console.log('✓ Task routes registered');
 app.use('/api/sprints', sprintRoutes);
+console.log('✓ Sprint routes registered');
 app.use('/api/ai', aiRoutes);
+console.log('✓ AI routes registered');
 app.use('/api/analytics', analyticsRoutes);
+console.log('✓ Analytics routes registered');
 app.use('/api/notifications', notificationRoutes);
+console.log('✓ Notification routes registered');
 
 // Health check route
 app.get('/api/health', (req, res) => {
