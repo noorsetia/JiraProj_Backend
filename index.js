@@ -2,23 +2,23 @@
 // This file exports the Express app without calling .listen()
 // Vercel's @vercel/node runtime handles the HTTP server automatically
 
-import express from 'express';
-import dotenv from 'dotenv';
-import cors from 'cors';
-import session from 'express-session';
-import passport from 'passport';
-import connectDB from './config/database.js';
-import { configurePassport } from './config/passport.js';
-import errorHandler from './middleware/errorHandler.js';
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const session = require('express-session');
+const passport = require('passport');
+const connectDB = require('./config/database.js');
+const { configurePassport } = require('./config/passport.js');
+const errorHandler = require('./middleware/errorHandler.js');
 
 // Import routes
-import authRoutes from './routes/authRoutes.js';
-import projectRoutes from './routes/projectRoutes.js';
-import taskRoutes from './routes/taskRoutes.js';
-import sprintRoutes from './routes/sprintRoutes.js';
-import aiRoutes from './routes/aiRoutes.js';
-import analyticsRoutes from './routes/analyticsRoutes.js';
-import notificationRoutes from './routes/notificationRoutes.js';
+const authRoutes = require('./routes/authRoutes.js');
+const projectRoutes = require('./routes/projectRoutes.js');
+const taskRoutes = require('./routes/taskRoutes.js');
+const sprintRoutes = require('./routes/sprintRoutes.js');
+const aiRoutes = require('./routes/aiRoutes.js');
+const analyticsRoutes = require('./routes/analyticsRoutes.js');
+const notificationRoutes = require('./routes/notificationRoutes.js');
 
 // Load environment variables
 dotenv.config();
@@ -159,4 +159,4 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Export for Vercel serverless
-export default app;
+module.exports = app;
