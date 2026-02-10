@@ -2,73 +2,22 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import session from 'express-session';
-import passport from 'passport';
-import connectDB from '../config/database.js';
-import { configurePassport } from '../config/passport.js';
-import errorHandler from '../middleware/errorHandler.js';
-
-// Import routes
-import authRoutes from '../routes/authRoutes.js';
-import projectRoutes from '../routes/projectRoutes.js';
-import taskRoutes from '../routes/taskRoutes.js';
-import sprintRoutes from '../routes/sprintRoutes.js';
-import aiRoutes from '../routes/aiRoutes.js';
-import analyticsRoutes from '../routes/analyticsRoutes.js';
-import notificationRoutes from '../routes/notificationRoutes.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 
-// Connect to MongoDB
-connectDB().catch(err => console.error('MongoDB connection error:', err));
-
-// Configure Passport
-configurePassport();
-
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL,
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'https://jira-proj-frontend.vercel.app'
-    ].filter(Boolean);
-    
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Allow all for debugging
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Session middleware
-app.use(session({
-  secret: process.env.JWT_SECRET || 'fallback-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000
-  }
+// CORS
+app.use(cors({
+  origin: true,
+  credentials: true
 }));
 
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Request logging
+// Logging
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
@@ -79,31 +28,79 @@ app.get('/api/health', (req, res) => {
   res.json({
     success: true,
     message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'production'
+    timestamp: new Date().toISOString()
   });
 });
 
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/projects', projectRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/sprints', sprintRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/notifications', notificationRoutes);
+// Import and setup routes with error handling
+let routesLoaded = false;
+
+(async () => {
+  try {
+    console.log('Loading database...');
+    const dbModule = await import('../config/database.js');
+    await dbModule.default().catch(err => console.error('DB error:', err.message));
+    
+    console.log('Loading passport...');
+    const passportModule = await import('passport');
+    const sessionModule = await import('express-session');
+    const passportConfigModule = await import('../config/passport.js');
+    
+    app.use(sessionModule.default({
+      secret: process.env.JWT_SECRET || 'fallback',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { secure: false, maxAge: 86400000 }
+    }));
+    
+    app.use(passportModule.default.initialize());
+    app.use(passportModule.default.session());
+    passportConfigModule.configurePassport();
+    
+    console.log('Loading routes...');
+    const authRoutes = await import('../routes/authRoutes.js');
+    const projectRoutes = await import('../routes/projectRoutes.js');
+    const taskRoutes = await import('../routes/taskRoutes.js');
+    const sprintRoutes = await import('../routes/sprintRoutes.js');
+    const aiRoutes = await import('../routes/aiRoutes.js');
+    const analyticsRoutes = await import('../routes/analyticsRoutes.js');
+    const notificationRoutes = await import('../routes/notificationRoutes.js');
+    
+    app.use('/api/auth', authRoutes.default);
+    app.use('/api/projects', projectRoutes.default);
+    app.use('/api/tasks', taskRoutes.default);
+    app.use('/api/sprints', sprintRoutes.default);
+    app.use('/api/ai', aiRoutes.default);
+    app.use('/api/analytics', analyticsRoutes.default);
+    app.use('/api/notifications', notificationRoutes.default);
+    
+    console.log('✅ All routes loaded');
+    
+    const errorHandlerModule = await import('../middleware/errorHandler.js');
+    app.use(errorHandlerModule.default);
+    
+    routesLoaded = true;
+  } catch (error) {
+    console.error('❌ Startup error:', error.message);
+    console.error('Stack:', error.stack);
+  }
+})();
 
 // 404 handler
 app.use((req, res) => {
+  if (!routesLoaded) {
+    return res.status(503).json({
+      success: false,
+      message: 'Server is still initializing, please try again',
+      routesLoaded
+    });
+  }
   res.status(404).json({
     success: false,
     message: 'Route not found',
     path: req.path
   });
 });
-
-// Error handling middleware
-app.use(errorHandler);
 
 export default app;
 
