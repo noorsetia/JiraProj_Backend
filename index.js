@@ -2,23 +2,23 @@
 // This file exports the Express app without calling .listen()
 // Vercel's @vercel/node runtime handles the HTTP server automatically
 
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const session = require('express-session');
-const passport = require('passport');
-const connectDB = require('./config/database.js');
-const { configurePassport } = require('./config/passport.js');
-const errorHandler = require('./middleware/errorHandler.js');
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import session from 'express-session';
+import passport from 'passport';
+import connectDB from './config/database.js';
+import { configurePassport } from './config/passport.js';
+import errorHandler from './middleware/errorHandler.js';
 
 // Import routes
-const authRoutes = require('./routes/authRoutes.js');
-const projectRoutes = require('./routes/projectRoutes.js');
-const taskRoutes = require('./routes/taskRoutes.js');
-const sprintRoutes = require('./routes/sprintRoutes.js');
-const aiRoutes = require('./routes/aiRoutes.js');
-const analyticsRoutes = require('./routes/analyticsRoutes.js');
-const notificationRoutes = require('./routes/notificationRoutes.js');
+import authRoutes from './routes/authRoutes.js';
+import projectRoutes from './routes/projectRoutes.js';
+import taskRoutes from './routes/taskRoutes.js';
+import sprintRoutes from './routes/sprintRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -26,16 +26,12 @@ dotenv.config();
 // Initialize express app
 const app = express();
 
-// Connect to MongoDB (only once per cold start)
-let dbConnected = false;
-if (!dbConnected) {
-  connectDB().then(() => {
-    dbConnected = true;
-    console.log('MongoDB connected in serverless function');
-  }).catch(err => {
-    console.error('MongoDB connection error:', err);
-  });
-}
+// Connect to MongoDB - don't await, let it connect in background
+// The connection will be cached and reused across invocations
+connectDB().catch(err => {
+  console.error('MongoDB connection failed:', err.message);
+  // Continue anyway - some routes might work without DB
+});
 
 // Configure Passport
 configurePassport();
@@ -159,4 +155,4 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Export for Vercel serverless
-module.exports = app;
+export default app;
