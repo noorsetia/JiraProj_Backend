@@ -13,10 +13,13 @@ const connectDB = async () => {
   try {
     // Set serverless-friendly options
     mongoose.set('strictQuery', false);
+    mongoose.set('bufferCommands', false); // Disable buffering
     
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+      serverSelectionTimeoutMS: 10000, // Increased to 10s
       socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
     });
 
     cachedConnection = conn;

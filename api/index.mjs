@@ -33,8 +33,16 @@ console.log('Routes imported:', {
 
 const app = express();
 
-// Connect to MongoDB
-connectDB().catch(err => console.error('DB error:', err.message));
+// Connect to MongoDB and wait for it
+let dbConnected = false;
+connectDB()
+  .then(() => {
+    dbConnected = true;
+    console.log('✅ MongoDB connection established');
+  })
+  .catch(err => {
+    console.error('❌ MongoDB connection failed:', err.message);
+  });
 
 // Configure Passport
 configurePassport();
