@@ -111,15 +111,3 @@ app.use((req, res) => {
 
 // Export handler for Vercel
 export default app;
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found',
-    path: req.path,
-    routesInitialized
-  });
-});
-
-export default app;
