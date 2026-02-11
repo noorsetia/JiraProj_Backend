@@ -48,16 +48,16 @@ async function loadRoutes() {
   try {
     // Dynamic imports
     const [
-      { default: connectDB },
-      { configurePassport },
-      { default: authRoutes },
-      { default: projectRoutes },
-      { default: taskRoutes },
-      { default: sprintRoutes },
-      { default: aiRoutes },
-      { default: analyticsRoutes },
-      { default: notificationRoutes },
-      { default: errorHandler }
+      dbModule,
+      passportConfigModule,
+      authRoutesModule,
+      projectRoutesModule,
+      taskRoutesModule,
+      sprintRoutesModule,
+      aiRoutesModule,
+      analyticsRoutesModule,
+      notificationRoutesModule,
+      errorHandlerModule
     ] = await Promise.all([
       import('../config/database.js'),
       import('../config/passport.js'),
@@ -72,22 +72,22 @@ async function loadRoutes() {
     ]);
 
     // Connect DB
-    connectDB().catch(err => console.error('DB error:', err.message));
+    dbModule.default().catch(err => console.error('DB error:', err.message));
     
     // Configure passport
-    configurePassport();
+    passportConfigModule.configurePassport();
 
     // Register routes
-    app.use('/api/auth', authRoutes);
-    app.use('/api/projects', projectRoutes);
-    app.use('/api/tasks', taskRoutes);
-    app.use('/api/sprints', sprintRoutes);
-    app.use('/api/ai', aiRoutes);
-    app.use('/api/analytics', analyticsRoutes);
-    app.use('/api/notifications', notificationRoutes);
+    app.use('/api/auth', authRoutesModule.default);
+    app.use('/api/projects', projectRoutesModule.default);
+    app.use('/api/tasks', taskRoutesModule.default);
+    app.use('/api/sprints', sprintRoutesModule.default);
+    app.use('/api/ai', aiRoutesModule.default);
+    app.use('/api/analytics', analyticsRoutesModule.default);
+    app.use('/api/notifications', notificationRoutesModule.default);
     
     // Error handler
-    app.use(errorHandler);
+    app.use(errorHandlerModule.default);
     
     routesInitialized = true;
     console.log('✅ Routes loaded');
