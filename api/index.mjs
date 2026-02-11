@@ -20,6 +20,17 @@ import notificationRoutes from '../routes/notificationRoutes.js';
 // Load env
 dotenv.config();
 
+console.log('🚀 Starting Vercel serverless function...');
+console.log('Routes imported:', {
+  auth: !!authRoutes,
+  projects: !!projectRoutes,
+  tasks: !!taskRoutes,
+  sprints: !!sprintRoutes,
+  ai: !!aiRoutes,
+  analytics: !!analyticsRoutes,
+  notifications: !!notificationRoutes
+});
+
 const app = express();
 
 // Connect to MongoDB
@@ -82,13 +93,22 @@ app.get('/api/debug/routes', (req, res) => {
 });
 
 // Register API routes
+console.log('Registering API routes...');
 app.use('/api/auth', authRoutes);
+console.log('✓ Auth routes registered');
 app.use('/api/projects', projectRoutes);
+console.log('✓ Project routes registered');
 app.use('/api/tasks', taskRoutes);
+console.log('✓ Task routes registered');
 app.use('/api/sprints', sprintRoutes);
+console.log('✓ Sprint routes registered');
 app.use('/api/ai', aiRoutes);
+console.log('✓ AI routes registered');
 app.use('/api/analytics', analyticsRoutes);
+console.log('✓ Analytics routes registered');
 app.use('/api/notifications', notificationRoutes);
+console.log('✓ Notification routes registered');
+console.log('✅ All routes registered successfully');
 
 // 404 handler
 app.use((req, res) => {
