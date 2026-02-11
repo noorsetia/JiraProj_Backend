@@ -4,11 +4,29 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import session from 'express-session';
 import passport from 'passport';
+import connectDB from '../config/database.js';
+import { configurePassport } from '../config/passport.js';
+import errorHandler from '../middleware/errorHandler.js';
+
+// Import routes synchronously
+import authRoutes from '../routes/authRoutes.js';
+import projectRoutes from '../routes/projectRoutes.js';
+import taskRoutes from '../routes/taskRoutes.js';
+import sprintRoutes from '../routes/sprintRoutes.js';
+import aiRoutes from '../routes/aiRoutes.js';
+import analyticsRoutes from '../routes/analyticsRoutes.js';
+import notificationRoutes from '../routes/notificationRoutes.js';
 
 // Load env
 dotenv.config();
 
 const app = express();
+
+// Connect to MongoDB
+connectDB().catch(err => console.error('DB error:', err.message));
+
+// Configure Passport
+configurePassport();
 
 // CORS
 app.use(cors({
@@ -39,75 +57,26 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Import routes asynchronously
-let routesInitialized = false;
+// Register API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/sprints', sprintRoutes);
+app.use('/api/ai', aiRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
-async function loadRoutes() {
-  if (routesInitialized) return;
-  
-  try {
-    // Dynamic imports
-    const [
-      dbModule,
-      passportConfigModule,
-      authRoutesModule,
-      projectRoutesModule,
-      taskRoutesModule,
-      sprintRoutesModule,
-      aiRoutesModule,
-      analyticsRoutesModule,
-      notificationRoutesModule,
-      errorHandlerModule
-    ] = await Promise.all([
-      import('../config/database.js'),
-      import('../config/passport.js'),
-      import('../routes/authRoutes.js'),
-      import('../routes/projectRoutes.js'),
-      import('../routes/taskRoutes.js'),
-      import('../routes/sprintRoutes.js'),
-      import('../routes/aiRoutes.js'),
-      import('../routes/analyticsRoutes.js'),
-      import('../routes/notificationRoutes.js'),
-      import('../middleware/errorHandler.js')
-    ]);
-
-    // Connect DB
-    dbModule.default().catch(err => console.error('DB error:', err.message));
-    
-    // Configure passport
-    passportConfigModule.configurePassport();
-
-    // Register routes
-    app.use('/api/auth', authRoutesModule.default);
-    app.use('/api/projects', projectRoutesModule.default);
-    app.use('/api/tasks', taskRoutesModule.default);
-    app.use('/api/sprints', sprintRoutesModule.default);
-    app.use('/api/ai', aiRoutesModule.default);
-    app.use('/api/analytics', analyticsRoutesModule.default);
-    app.use('/api/notifications', notificationRoutesModule.default);
-    
-    // Error handler
-    app.use(errorHandlerModule.default);
-    
-    routesInitialized = true;
-    console.log('✅ Routes loaded');
-  } catch (error) {
-    console.error('❌ Route loading failed:', error.message);
-  }
-}
-
-// Start loading routes
-loadRoutes();
-
-// 404
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found',
-    path: req.path,
-    routesInitialized
+    path: req.path
   });
 });
 
-// Export handler for Vercel
+// Error handler
+app.use(errorHandler);
+
+// Export for Vercel
 export default app;
