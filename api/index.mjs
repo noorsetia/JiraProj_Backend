@@ -34,15 +34,33 @@ console.log('Routes imported:', {
 const app = express();
 
 // Connect to MongoDB and wait for it
-let dbConnected = false;
-connectDB()
-  .then(() => {
-    dbConnected = true;
-    console.log('✅ MongoDB connection established');
-  })
-  .catch(err => {
-    console.error('❌ MongoDB connection failed:', err.message);
-  });
+let dbConnectionPromise = null;
+
+async function ensureDbConnection() {
+  if (!dbConnectionPromise) {
+    dbConnectionPromise = connectDB();
+  }
+  return dbConnectionPromise;
+}
+
+// Initialize connection
+ensureDbConnection()
+  .then(() => console.log('✅ MongoDB ready'))
+  .catch(err => console.error('❌ MongoDB failed:', err.message));
+
+// Middleware to ensure DB is connected before handling requests
+app.use(async (req, res, next) => {
+  try {
+    await ensureDbConnection();
+    next();
+  } catch (error) {
+    res.status(503).json({
+      success: false,
+      message: 'Database connection unavailable',
+      error: error.message
+    });
+  }
+});
 
 // Configure Passport
 configurePassport();
@@ -65,6 +83,25 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Jira Project Backend API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      projects: '/api/projects',
+      tasks: '/api/tasks',
+      sprints: '/api/sprints',
+      ai: '/api/ai',
+      analytics: '/api/analytics',
+      notifications: '/api/notifications'
+    }
+  });
+});
 
 // Health endpoint
 app.get('/api/health', (req, res) => {
