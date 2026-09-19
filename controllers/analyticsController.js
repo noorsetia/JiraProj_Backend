@@ -133,7 +133,9 @@ export const getProjectAnalytics = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
 
   // Verify project access
-  const project = await Project.findById(projectId);
+  const project = await Project.findById(projectId)
+    .populate('members.user', 'name');
+
   if (!project) {
     return res.status(404).json({
       success: false,
@@ -142,9 +144,11 @@ export const getProjectAnalytics = asyncHandler(async (req, res) => {
   }
 
   const isMember = project.members.some(
-    member => member.user.toString() === req.user.id
+    member => member.user?._id?.toString() === req.user.id
   );
-  const isCreator = project.createdBy.toString() === req.user.id;
+
+  const isCreator =
+    project.createdBy.toString() === req.user.id;
 
   if (!isMember && !isCreator) {
     return res.status(403).json({
@@ -190,51 +194,80 @@ export const getProjectAnalytics = asyncHandler(async (req, res) => {
   ]);
 
   // Team member performance
-  const memberStats = await Task.aggregate([
-    {
-      $match: {
-        project: new mongoose.Types.ObjectId(projectId),
-        isActive: true,
-        assignedTo: { $ne: null }
-      }
-    },
-    {
-      $group: {
-        _id: '$assignedTo',
-        totalTasks: { $sum: 1 },
-        completedTasks: {
-          $sum: { $cond: [{ $eq: ['$status', 'Done'] }, 1, 0] }
-        }
-      }
-    },
-    {
-      $lookup: {
-        from: 'users',
-        localField: '_id',
-        foreignField: '_id',
-        as: 'user'
-      }
-    },
-    {
-      $unwind: '$user'
-    },
-    {
-      $project: {
-        userId: '$_id',
-        name: '$user.name',
-        email: '$user.email',
-        totalTasks: 1,
-        completedTasks: 1,
-        completionRate: {
+const memberStats = await Task.aggregate([
+  {
+    $match: {
+      project: new mongoose.Types.ObjectId(projectId),
+      isActive: true,
+      assignedTo: { $ne: null }
+    }
+  },
+  {
+    $group: {
+      _id: '$assignedTo',
+      totalTasks: { $sum: 1 },
+      completedTasks: {
+        $sum: {
           $cond: [
-            { $gt: ['$totalTasks', 0] },
-            { $multiply: [{ $divide: ['$completedTasks', '$totalTasks'] }, 100] },
+            { $eq: ['$status', 'Done'] },
+            1,
+            0
+          ]
+        }
+      },
+      highPriorityTasks: {
+        $sum: {
+          $cond: [
+            { $eq: ['$priority', 'High'] },
+            1,
+            0
+          ]
+        }
+      },
+      delayedTasks: {
+        $sum: {
+          $cond: [
+            {
+              $and: [
+                { $ne: ['$status', 'Done'] },
+                { $lt: ['$dueDate', new Date()] }
+              ]
+            },
+            1,
             0
           ]
         }
       }
     }
-  ]);
+  }
+]);
+
+// Build contribution data for every project member,
+// including members who currently have no assigned tasks.
+const contributionStats = project.members.map((member) => {
+  const userId = member.user?._id?.toString();
+
+  const taskStats = memberStats.find(
+    (stat) => stat._id.toString() === userId
+  );
+
+  const totalTasks = taskStats?.totalTasks || 0;
+  const completedTasks = taskStats?.completedTasks || 0;
+
+  return {
+    userId: member.user?._id,
+    name: member.user?.name || 'Unknown',
+    role: member.role,
+    totalTasks,
+    completedTasks,
+    highPriorityTasks: taskStats?.highPriorityTasks || 0,
+    delayedTasks: taskStats?.delayedTasks || 0,
+    completionRate:
+      totalTasks > 0
+        ? Math.round((completedTasks / totalTasks) * 100)
+        : 0
+  };
+});
 
   // Sprint statistics
   const sprints = await Sprint.find({
@@ -304,6 +337,7 @@ export const getProjectAnalytics = asyncHandler(async (req, res) => {
       tasksByStatus,
       tasksByPriority,
       memberStats,
+      contributionStats,
       sprintStats,
       completionTrend,
       delayedTasks

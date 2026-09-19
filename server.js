@@ -17,6 +17,10 @@ import sprintRoutes from './routes/sprintRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
+import noteRoutes from './routes/noteRoutes.js';
+import geminiRoutes from './routes/geminiRoutes.js';
+import fileRoutes from './routes/fileRoutes.js';
+import publicProjectRoutes from './routes/publicProjectRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -84,6 +88,11 @@ app.use('/api/sprints', sprintRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/notes', noteRoutes);
+app.use('/api/gemini', geminiRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/public', publicProjectRoutes);
+
 
 // Health check route
 app.get('/api/health', (req, res) => {
@@ -107,7 +116,8 @@ app.get('/', (req, res) => {
       sprints: '/api/sprints',
       ai: '/api/ai',
       analytics: '/api/analytics',
-      notifications: '/api/notifications'
+      notifications: '/api/notifications',
+      notes: '/api/notes'
     }
   });
 });
